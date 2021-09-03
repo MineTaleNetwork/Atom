@@ -50,7 +50,7 @@ public class ProfilesManager {
 
     public void updateProfile(Profile profile) {
         this.cache.put(profile.getId(), profile);
-        var result = Profile.getCollection().replaceOne(Filters.eq(profile.getId().toString()), profile.toDocument(), new ReplaceOptions().upsert(true));
+        Profile.getCollection().replaceOne(Filters.eq(profile.getId().toString()), profile.toDocument(), new ReplaceOptions().upsert(true));
     }
 
     public CompletableFuture<Profile> getProfile(String name) {

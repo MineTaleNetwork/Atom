@@ -20,8 +20,10 @@ import java.util.Arrays;
 @Getter
 public class Atom {
 
+    // TODO: PERMS (CTRL SHIFT F)
     // TODO: Friend Requests
     // TODO: Cooldowns
+    // TODO: Gamemode listener
 
     @Getter
     private static Atom atom;

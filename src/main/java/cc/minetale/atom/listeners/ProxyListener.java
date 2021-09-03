@@ -46,13 +46,14 @@ public class ProxyListener implements Listener {
                 .getProfile(uuid)
                 .thenAccept(profile -> {
                     if(profile == null) { return; }
-                    if (profile.api().getAllPermissions().contains("flame.staff")) {
-                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
-                                .append(profile.api().getChatFormat())
-                                .append(Component.text(" has connected to ", MC.CC.GRAY.getTextColor()))
-                                .append(Component.text(payload.getServer(), MC.CC.WHITE.getTextColor()))
-                                .build()));
-                    }
+                    // TODO: PERMS
+//                    if (profile.api().getAllPermissions().contains("flame.staff")) {
+//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
+//                                .append(profile.api().getChatFormat())
+//                                .append(Component.text(" has connected to ", MC.CC.GRAY.getTextColor()))
+//                                .append(Component.text(payload.getServer(), MC.CC.WHITE.getTextColor()))
+//                                .build()));
+//                    }
                 });
 
         Player.getCachedPlayerList().put(uuid, player);
@@ -77,15 +78,16 @@ public class ProxyListener implements Listener {
                 .getProfile(uuid)
                 .thenAccept(profile -> {
                     if (profile == null) { return; }
-                    if (profile.api().getAllPermissions().contains("flame.staff")) {
-                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
-                                .append(profile.api().getChatFormat())
-                                .append(Component.text(" has switched to ", MC.CC.GRAY.getTextColor()))
-                                .append(Component.text(payload.getServerTo(), MC.CC.WHITE.getTextColor()))
-                                .append(Component.text(" from ", MC.CC.GRAY.getTextColor()))
-                                .append(Component.text(payload.getServerFrom(), MC.CC.WHITE.getTextColor()))
-                                .build()));
-                    }
+                    // TODO: PERMS
+//                    if (profile.api().getAllPermissions().contains("flame.staff")) {
+//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
+//                                .append(profile.api().getChatFormat())
+//                                .append(Component.text(" has switched to ", MC.CC.GRAY.getTextColor()))
+//                                .append(Component.text(payload.getServerTo(), MC.CC.WHITE.getTextColor()))
+//                                .append(Component.text(" from ", MC.CC.GRAY.getTextColor()))
+//                                .append(Component.text(payload.getServerFrom(), MC.CC.WHITE.getTextColor()))
+//                                .build()));
+//                    }
                 });
 
         player.setCurrentServer(payload.getServerTo());
@@ -111,13 +113,14 @@ public class ProxyListener implements Listener {
                 .getProfile(payload.getUuid())
                 .thenAccept(profile -> {
                     if (profile == null) { return; }
-                    if (profile.api().getAllPermissions().contains("flame.staff")) {
-                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
-                                .append(profile.api().getChatFormat())
-                                .append(Component.text(" disconnected from ", MC.CC.GRAY.getTextColor()))
-                                .append(Component.text(payload.getServer(), MC.CC.WHITE.getTextColor()))
-                                .build()));
-                    }
+                    // TODO: PERMS
+//                    if (profile.api().getAllPermissions().contains("flame.staff")) {
+//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
+//                                .append(profile.api().getChatFormat())
+//                                .append(Component.text(" disconnected from ", MC.CC.GRAY.getTextColor()))
+//                                .append(Component.text(payload.getServer(), MC.CC.WHITE.getTextColor()))
+//                                .build()));
+//                    }
                 });
 
     }
