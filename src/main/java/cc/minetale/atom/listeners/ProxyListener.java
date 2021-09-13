@@ -5,26 +5,43 @@ import cc.minetale.atom.network.Party;
 import cc.minetale.atom.network.Player;
 import cc.minetale.atom.timers.PartyPlayerOfflineTimer;
 import cc.minetale.commonlib.modules.network.Server;
-import cc.minetale.commonlib.modules.pigeon.payloads.minecraft.MessagePlayerPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.network.ProxyPlayerConnectPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.network.ProxyPlayerDisconnectPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.network.ProxyPlayerSwitchPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.network.ServerUpdatePayload;
-import cc.minetale.commonlib.util.MC;
+import cc.minetale.commonlib.modules.network.server.Server;
+import cc.minetale.commonlib.modules.pigeon.payloads.atom.AtomOnlinePlayerCountPayload;
+import cc.minetale.commonlib.modules.pigeon.payloads.atom.AtomPlayerCountRequestPayload;
+import cc.minetale.commonlib.modules.pigeon.payloads.network.*;
 import cc.minetale.commonlib.util.PigeonUtil;
 import cc.minetale.pigeon.annotations.PayloadHandler;
 import cc.minetale.pigeon.annotations.PayloadListener;
+import cc.minetale.pigeon.feedback.RequiredState;
 import cc.minetale.pigeon.listeners.Listener;
-import net.kyori.adventure.text.Component;
 
 import java.util.UUID;
 
 @PayloadListener
 public class ProxyListener implements Listener {
 
+    @PayloadHandler(requiredState = RequiredState.REQUEST)
+    public void onPlayerCountRequest(AtomPlayerCountRequestPayload payload) {
+        payload.sendResponse(new AtomPlayerCountRequestPayload(Server.getOnlinePlayerCount()));
+    }
+
     @PayloadHandler
     public void onServerUpdate(ServerUpdatePayload payload) {
-        new Server(payload.getName(), payload.getGamemode(), payload.getUptime(), payload.getTps(), payload.getPlayers(), payload.getMaxPlayers()).updateServer();
+        Server server = payload.getServer();
+
+        switch (payload.getAction()) {
+            case ADD:
+                server.updateServer();
+                PigeonUtil.broadcast(new ServerOnlinePayload(server.getName()));
+                break;
+            case DELETE:
+                Server.getServerList().removeIf(filter -> filter.getName().equals(server.getName()));
+                PigeonUtil.broadcast(new ServerOfflinePayload(server.getName()));
+                break;
+            case STATE_CHANGE:
+                server.updateServer();
+                break;
+        }
     }
 
     @PayloadHandler

@@ -5,7 +5,9 @@ import cc.minetale.atom.managers.ProfilesManager;
 import cc.minetale.atom.util.Logger;
 import cc.minetale.atom.util.timer.TimerManager;
 import cc.minetale.commonlib.CommonLib;
-import cc.minetale.commonlib.modules.network.Server;
+import cc.minetale.commonlib.modules.network.server.Server;
+import cc.minetale.commonlib.modules.pigeon.payloads.network.ServerOfflinePayload;
+import cc.minetale.commonlib.util.PigeonUtil;
 import cc.minetale.pigeon.Pigeon;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -55,8 +57,16 @@ public class Atom {
         new Thread(() -> {
             while (true) {
                 try {
-                    Server.serverList.removeIf(server -> (System.currentTimeMillis() - server.getLastUpdated()) >= (1000 * 30));
-                    Thread.sleep(5000);
+                    Server.getServerList().removeIf(server -> {
+                        boolean remove = (System.currentTimeMillis() - server.getLastUpdated()) >= (1000 * 9);
+
+                        if(remove)
+                            PigeonUtil.broadcast(new ServerOfflinePayload(server.getName()));
+
+                        return remove;
+                    });
+
+                    Thread.sleep(1000);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
