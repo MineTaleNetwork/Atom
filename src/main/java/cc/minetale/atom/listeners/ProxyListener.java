@@ -4,9 +4,7 @@ import cc.minetale.atom.Atom;
 import cc.minetale.atom.network.Party;
 import cc.minetale.atom.network.Player;
 import cc.minetale.atom.timers.PartyPlayerOfflineTimer;
-import cc.minetale.commonlib.modules.network.Server;
 import cc.minetale.commonlib.modules.network.server.Server;
-import cc.minetale.commonlib.modules.pigeon.payloads.atom.AtomOnlinePlayerCountPayload;
 import cc.minetale.commonlib.modules.pigeon.payloads.atom.AtomPlayerCountRequestPayload;
 import cc.minetale.commonlib.modules.pigeon.payloads.network.*;
 import cc.minetale.commonlib.util.PigeonUtil;
@@ -31,14 +29,22 @@ public class ProxyListener implements Listener {
 
         switch (payload.getAction()) {
             case ADD:
-                server.updateServer();
                 PigeonUtil.broadcast(new ServerOnlinePayload(server.getName()));
+
+                server.updateServer();
                 break;
             case DELETE:
-                Server.getServerList().removeIf(filter -> filter.getName().equals(server.getName()));
+                Server.getServerList()
+                        .removeIf(filter -> filter.getName().equals(server.getName()));
+
                 PigeonUtil.broadcast(new ServerOfflinePayload(server.getName()));
                 break;
             case STATE_CHANGE:
+                Server foundServer = Server.getServerByName(server.getName());
+
+                if(foundServer == null)
+                    PigeonUtil.broadcast(new ServerOnlinePayload(server.getName()));
+
                 server.updateServer();
                 break;
         }
@@ -126,7 +132,8 @@ public class ProxyListener implements Listener {
             }
         }
 
-        Atom.getAtom().getProfilesManager()
+        Atom.getAtom()
+                .getProfilesManager()
                 .getProfile(payload.getUuid())
                 .thenAccept(profile -> {
                     if (profile == null) { return; }
