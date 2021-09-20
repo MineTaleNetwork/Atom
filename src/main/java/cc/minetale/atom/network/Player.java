@@ -80,7 +80,7 @@ public class Player {
                 Profile targetProfile = profilesManager.getProfile(this.uuid).get(10, TimeUnit.SECONDS);
 
                 if(initiatorProfile == null || targetProfile == null) {
-                    Atom.getAtom().getPigeon().broadcast(new MessagePlayerPayload(inviterUUID, MC.Chat.notificationMessage("Party",
+                    PigeonUtil.broadcast(new MessagePlayerPayload(inviterUUID, MC.Chat.notificationMessage("Party",
                         Component.text("Unable to invite that player to the party.", MC.CC.GRAY.getTextColor()))));
 
                     return;
