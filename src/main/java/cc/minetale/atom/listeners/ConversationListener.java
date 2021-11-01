@@ -1,104 +1,98 @@
 package cc.minetale.atom.listeners;
 
 import cc.minetale.atom.Atom;
-import cc.minetale.atom.managers.ProfilesManager;
+import cc.minetale.atom.managers.PlayerManager;
 import cc.minetale.atom.network.Player;
-import cc.minetale.commonlib.modules.pigeon.payloads.conversation.ConversationMessagePayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.conversation.ConversationReplyPayload;
-import cc.minetale.commonlib.modules.profile.Profile;
+import cc.minetale.commonlib.pigeon.payloads.conversation.ConversationMessagePayload;
+import cc.minetale.commonlib.pigeon.payloads.conversation.ConversationReplyPayload;
+import cc.minetale.commonlib.pigeon.payloads.minecraft.CommonMessagePayload;
+import cc.minetale.commonlib.profile.Profile;
 import cc.minetale.commonlib.util.MC;
 import cc.minetale.pigeon.annotations.PayloadHandler;
 import cc.minetale.pigeon.annotations.PayloadListener;
 import cc.minetale.pigeon.listeners.Listener;
-import net.kyori.adventure.text.Component;
 
+import java.text.MessageFormat;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 @PayloadListener
 public class ConversationListener implements Listener {
 
+    // TODO -> Testing Purposes
+    @PayloadHandler
+    public void onCommonMessage(CommonMessagePayload payload) {
+        return new MessageFormat(ChatColor.translateAlternateColorCodes('&',
+                Zoot.get().getMainConfig().getString(path))).format(objects);
+    }
+
+    // TODO -> Add a payload to check if the player is online
     @PayloadHandler
     public void onConversationMessage(ConversationMessagePayload payload) {
         UUID initiatorUUID = payload.getInitiator();
-        Player initiator = Player.getPlayerByUuid(initiatorUUID);
-        Player target = Player.getPlayerByUuid(payload.getTarget());
 
-        String message = payload.getMessage();
+        // TODO -> First check if they are online THEN attempt to load their Player
+//        Player.sendMessage(initiatorUUID,
+//                        MC.component("That player is currently not online.", MC.CC.RED));
 
-        if (initiator == null) {
-            Player.sendMessage(initiatorUUID,
-                    Component.text("An error has occurred, please try rejoining the network.", MC.CC.RED.getTextColor()));
-            return;
-        }
+        Player.getPlayer(initiatorUUID).thenAccept(initiator -> Player.getPlayer(payload.getTarget()).thenAccept(target -> {
+            String message = payload.getMessage();
 
-        if (target == null) {
-            Player.sendMessage(initiatorUUID,
-                    Component.text("That player is currently not online.", MC.CC.RED.getTextColor()));
-            return;
-        }
+            // TODO -> Check if they are online
+//            if (target == null) {
+//                Player.sendMessage(initiatorUUID,
+//                        MC.component("That player is currently not online.", MC.CC.RED));
+//                return;
+//            }
 
-        initiator.sendConversationMessage(target, message);
+            initiator.sendConversationMessage(target, message);
+        }));
     }
 
     @PayloadHandler
     public void onConversationReply(ConversationReplyPayload payload) {
-        new Thread(() -> {
-            try {
-                final ProfilesManager profilesManager = Atom.getAtom().getProfilesManager();
+                final PlayerManager playerManager = Atom.getAtom().getPlayerManager();
 
                 UUID initiatorUUID = payload.getInitiator();
-                Player initiator = Player.getPlayerByUuid(initiatorUUID);
+                Player initiator = Player.getPlayer(initiatorUUID);
                 String message = payload.getMessage();
 
                 if(initiator == null) {
-                    Player.sendMessage(initiatorUUID,
-                            Component.text("An error has occurred, please try rejoining the network.", MC.CC.RED.getTextColor()));
+                    Player.sendMessage(initiatorUUID, MC.component("An error has occurred, please try rejoining the network.", MC.CC.RED));
                     return;
                 }
 
                 Player lastMessaged = initiator.getLastMessaged();
 
                 if(lastMessaged == null) {
-                    Player.sendMessage(initiatorUUID,
-                            Component.text("You haven't started a conversation with anybody.", MC.CC.RED.getTextColor()));
+                    Player.sendMessage(initiatorUUID, MC.component("You haven't started a conversation with anybody.", MC.CC.RED));
                     return;
                 }
 
-                if(Player.getPlayerByUuid(lastMessaged.getUuid()) == null) {
-                    Player.sendMessage(initiatorUUID,
-                            Component.text("That player is currently not online.", MC.CC.RED.getTextColor()));
+                if(Player.getPlayer(lastMessaged.getUuid()) == null) {
+                    Player.sendMessage(initiatorUUID, MC.component("That player is currently not online.", MC.CC.RED));
                     return;
                 }
 
-                Profile targetProfile = profilesManager.getProfile(lastMessaged.getUuid()).get();
+                Profile targetProfile = playerManager.getProfile(lastMessaged.getUuid()).get();
 
                 if(targetProfile == null) {
-                    Player.sendMessage(initiatorUUID,
-                            Component.text("Could not resolve player information.", MC.CC.RED.getTextColor()));
+                    Player.sendMessage(initiatorUUID, MC.component("Could not resolve player information.", MC.CC.RED));
                     return;
                 }
 
-                Profile initiatorProfile = profilesManager.getProfile(initiator.getUuid()).get();
+                Profile initiatorProfile = playerManager.getProfile(initiator.getUuid()).get();
 
                 if(initiatorProfile == null) {
-                    Player.sendMessage(initiatorUUID,
-                            Component.text("Failed to load your profile. Try again later.", MC.CC.RED.getTextColor()));
+                    Player.sendMessage(initiatorUUID, MC.component("Failed to load your profile. Try again later.", MC.CC.RED));
                     return;
                 }
 
                 if(targetProfile.api().isIgnoring(initiatorProfile) || !targetProfile.getOptionsProfile().isReceivingConversations()) {
-                    Player.sendMessage(initiatorUUID,
-                            Component.text("That player is not receiving new conversations right now.", MC.CC.RED.getTextColor()));
+                    Player.sendMessage(initiatorUUID, MC.component("That player is not receiving new conversations right now.", MC.CC.RED));
                     return;
                 }
 
                 initiator.reply(message);
-            } catch(ExecutionException | InterruptedException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
-        }).start();
 
     }
 

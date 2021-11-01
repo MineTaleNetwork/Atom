@@ -1,8 +1,8 @@
 package cc.minetale.atom.listeners;
 
-import cc.minetale.commonlib.modules.pigeon.payloads.rank.RankReloadPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.rank.RankRemovePayload;
-import cc.minetale.commonlib.modules.rank.Rank;
+import cc.minetale.commonlib.pigeon.payloads.rank.RankReloadPayload;
+import cc.minetale.commonlib.pigeon.payloads.rank.RankRemovePayload;
+import cc.minetale.commonlib.rank.Rank;
 import cc.minetale.pigeon.annotations.PayloadHandler;
 import cc.minetale.pigeon.annotations.PayloadListener;
 import cc.minetale.pigeon.listeners.Listener;

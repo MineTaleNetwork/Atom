@@ -4,9 +4,11 @@ import cc.minetale.atom.Atom;
 import cc.minetale.atom.network.Party;
 import cc.minetale.atom.network.Player;
 import cc.minetale.atom.timers.PartyPlayerOfflineTimer;
-import cc.minetale.commonlib.modules.network.server.Server;
-import cc.minetale.commonlib.modules.pigeon.payloads.atom.AtomPlayerCountRequestPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.network.*;
+import cc.minetale.atom.util.RankUtil;
+import cc.minetale.commonlib.network.server.Server;
+import cc.minetale.commonlib.pigeon.payloads.atom.AtomPlayerCountRequestPayload;
+import cc.minetale.commonlib.pigeon.payloads.minecraft.MessagePlayerPayload;
+import cc.minetale.commonlib.pigeon.payloads.network.*;
 import cc.minetale.commonlib.util.PigeonUtil;
 import cc.minetale.pigeon.annotations.PayloadHandler;
 import cc.minetale.pigeon.annotations.PayloadListener;
@@ -28,34 +30,31 @@ public class ProxyListener implements Listener {
         Server server = payload.getServer();
 
         switch (payload.getAction()) {
-            case ADD:
+            case ADD -> {
                 PigeonUtil.broadcast(new ServerOnlinePayload(server.getName()));
-
                 server.updateServer();
-                break;
-            case DELETE:
+            }
+            case DELETE -> {
                 Server.getServerList()
                         .removeIf(filter -> filter.getName().equals(server.getName()));
-
                 PigeonUtil.broadcast(new ServerOfflinePayload(server.getName()));
-                break;
-            case STATE_CHANGE:
+            }
+            case STATE_CHANGE -> {
                 Server foundServer = Server.getServerByName(server.getName());
-
-                if(foundServer == null)
+                if (foundServer == null)
                     PigeonUtil.broadcast(new ServerOnlinePayload(server.getName()));
-
                 server.updateServer();
-                break;
+            }
         }
     }
 
     @PayloadHandler
     public void onProxyPlayerConnect(ProxyPlayerConnectPayload payload) {
         UUID uuid = payload.getUuid();
-        Player player = Player.getPlayerByUuid(payload.getUuid());
+        Player player = Player.getPlayer(payload.getUuid());
 
         if (player == null) {
+            Atom.getAtom().getPlayerManager().getPlayer()
             player = new Player(payload.getUuid(), payload.getPlayer(), payload.getServer());
         }
 
@@ -65,18 +64,18 @@ public class ProxyListener implements Listener {
             playerOfflineTimer.stop();
         }
 
-        Atom.getAtom().getProfilesManager()
+        Atom.getAtom().getPlayerManager()
                 .getProfile(uuid)
                 .thenAccept(profile -> {
                     if(profile == null) { return; }
                     // TODO: PERMS
-//                    if (profile.api().getAllPermissions().contains("flame.staff")) {
-//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
-//                                .append(profile.api().getChatFormat())
-//                                .append(Component.text(" has connected to ", MC.CC.GRAY.getTextColor()))
-//                                .append(Component.text(payload.getServer(), MC.CC.WHITE.getTextColor()))
-//                                .build()));
-//                    }
+                    if (RankUtil.hasMinimumRank(profile, "Helper")) {
+                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", MC.component()
+                                .append(profile.api().getChatFormat())
+                                .append(MC.component(" has connected to ", MC.CC.GRAY.getTextColor()))
+                                .append(MC.component(payload.getServer(), MC.CC.WHITE.getTextColor()))
+                                .build()));
+                    }
                 });
 
         Player.getCachedPlayerList().put(uuid, player);
@@ -85,10 +84,10 @@ public class ProxyListener implements Listener {
     @PayloadHandler
     public void onProxyPlayerSwitch(ProxyPlayerSwitchPayload payload) {
         UUID uuid = payload.getUuid();
-        Player player = Player.getPlayerByUuid(payload.getUuid());
+        Player player = Player.getPlayer(payload.getUuid());
 
         if(player == null) {
-            player = new Player(payload.getUuid(), payload.getPlayer(), payload.getServerTo());
+            player = new Player(payload.getUuid(), payload.getPlayer());
         }
 
         PartyPlayerOfflineTimer playerOfflineTimer = player.getPartyPlayerOfflineTimer();
@@ -97,18 +96,18 @@ public class ProxyListener implements Listener {
             playerOfflineTimer.stop();
         }
 
-        Atom.getAtom().getProfilesManager()
+        Atom.getAtom().getPlayerManager()
                 .getProfile(uuid)
                 .thenAccept(profile -> {
                     if (profile == null) { return; }
                     // TODO: PERMS
 //                    if (profile.api().getAllPermissions().contains("flame.staff")) {
-//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
+//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", MC.component()
 //                                .append(profile.api().getChatFormat())
-//                                .append(Component.text(" has switched to ", MC.CC.GRAY.getTextColor()))
-//                                .append(Component.text(payload.getServerTo(), MC.CC.WHITE.getTextColor()))
-//                                .append(Component.text(" from ", MC.CC.GRAY.getTextColor()))
-//                                .append(Component.text(payload.getServerFrom(), MC.CC.WHITE.getTextColor()))
+//                                .append(MC.component(" has switched to ", MC.CC.GRAY.getTextColor()))
+//                                .append(MC.component(payload.getServerTo(), MC.CC.WHITE.getTextColor()))
+//                                .append(MC.component(" from ", MC.CC.GRAY.getTextColor()))
+//                                .append(MC.component(payload.getServerFrom(), MC.CC.WHITE.getTextColor()))
 //                                .build()));
 //                    }
                 });
@@ -120,7 +119,7 @@ public class ProxyListener implements Listener {
 
     @PayloadHandler
     public void onProxyDisconnect(ProxyPlayerDisconnectPayload payload) {
-        Player player = Player.getPlayerByUuid(payload.getUuid());
+        Player player = Player.getPlayer(payload.getUuid());
         Player.getCachedPlayerList().remove(payload.getUuid());
 
         if(player != null) {
@@ -133,16 +132,16 @@ public class ProxyListener implements Listener {
         }
 
         Atom.getAtom()
-                .getProfilesManager()
+                .getPlayerManager()
                 .getProfile(payload.getUuid())
                 .thenAccept(profile -> {
                     if (profile == null) { return; }
                     // TODO: PERMS
 //                    if (profile.api().getAllPermissions().contains("flame.staff")) {
-//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", Component.text()
+//                        PigeonUtil.broadcast(new MessagePlayerPayload("flame.staff", MC.component()
 //                                .append(profile.api().getChatFormat())
-//                                .append(Component.text(" disconnected from ", MC.CC.GRAY.getTextColor()))
-//                                .append(Component.text(payload.getServer(), MC.CC.WHITE.getTextColor()))
+//                                .append(MC.component(" disconnected from ", MC.CC.GRAY.getTextColor()))
+//                                .append(MC.component(payload.getServer(), MC.CC.WHITE.getTextColor()))
 //                                .build()));
 //                    }
                 });

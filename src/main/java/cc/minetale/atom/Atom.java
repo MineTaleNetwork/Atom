@@ -1,12 +1,12 @@
 package cc.minetale.atom;
 
 import cc.minetale.atom.listeners.*;
-import cc.minetale.atom.managers.ProfilesManager;
+import cc.minetale.atom.managers.PlayerManager;
 import cc.minetale.atom.util.Logger;
 import cc.minetale.atom.util.timer.TimerManager;
 import cc.minetale.commonlib.CommonLib;
-import cc.minetale.commonlib.modules.network.server.Server;
-import cc.minetale.commonlib.modules.pigeon.payloads.network.ServerOfflinePayload;
+import cc.minetale.commonlib.network.server.Server;
+import cc.minetale.commonlib.pigeon.payloads.network.ServerOfflinePayload;
 import cc.minetale.commonlib.util.PigeonUtil;
 import cc.minetale.pigeon.Pigeon;
 import com.google.gson.Gson;
@@ -27,8 +27,7 @@ public class Atom {
     // TODO: Cooldowns
     // TODO: Gamemode listener
 
-    @Getter
-    private static Atom atom;
+    @Getter private static Atom atom;
 
     private final Gson gson;
 
@@ -39,9 +38,8 @@ public class Atom {
 
     private Pigeon pigeon;
 
-    private CacheManager cacheManager;
-
-    private ProfilesManager profilesManager;
+    private final CacheManager cacheManager;
+    private final PlayerManager playerManager;
 
     public Atom() {
         long start = System.currentTimeMillis();
@@ -51,7 +49,6 @@ public class Atom {
         atom = this;
 
         this.gson = new GsonBuilder().create();
-
         this.timerManager = new TimerManager();
 
         new Thread(() -> {
@@ -76,7 +73,7 @@ public class Atom {
         loadMongo();
 
         this.cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
-        this.profilesManager = new ProfilesManager(this.cacheManager);
+        this.playerManager = new PlayerManager(this.cacheManager);
 
         loadPigeon();
 

@@ -1,24 +1,61 @@
 package cc.minetale.atom.listeners;
 
 import cc.minetale.atom.Atom;
-import cc.minetale.commonlib.modules.pigeon.payloads.profile.ProfileCreatePayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.profile.ProfileRequestPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.profile.ProfileUpdatePayload;
-import cc.minetale.commonlib.modules.profile.Profile;
-import cc.minetale.commonlib.modules.profile.ProfileQueryResult;
+import cc.minetale.atom.network.FriendRequest;
+import cc.minetale.atom.network.PartyInvite;
+import cc.minetale.atom.network.Player;
+import cc.minetale.commonlib.pigeon.payloads.profile.IgnorePlayerPayload;
+import cc.minetale.commonlib.pigeon.payloads.profile.ProfileCreatePayload;
+import cc.minetale.commonlib.pigeon.payloads.profile.ProfileRequestPayload;
+import cc.minetale.commonlib.pigeon.payloads.profile.ProfileUpdatePayload;
+import cc.minetale.commonlib.profile.Profile;
+import cc.minetale.commonlib.profile.ProfileQueryResult;
 import cc.minetale.pigeon.annotations.PayloadHandler;
 import cc.minetale.pigeon.annotations.PayloadListener;
 import cc.minetale.pigeon.feedback.RequiredState;
 import cc.minetale.pigeon.listeners.Listener;
 
 import java.util.Collections;
+import java.util.UUID;
 
 @PayloadListener
 public class ProfileListener implements Listener {
 
+    @PayloadHandler
+    public void onPlayerIgnore(IgnorePlayerPayload payload) {
+
+        // TODO -> Check if they are already ignored
+        // TODO -> Send a message back to the player on success
+        // TODO -> Send proper messages (Player removed you from their friends list)
+
+        var initiatorUUID = payload.getInitiator();
+        var playerUUID = payload.getPlayer();
+
+        FriendRequest.removeRequests(initiatorUUID, playerUUID);
+
+        Player.getPlayer(initiatorUUID).thenAccept(initiator -> Player.getPlayer(playerUUID).thenAccept(player -> {
+            initiator.getPartyInvites().remove(playerUUID);
+            player.getPartyInvites().remove(initiatorUUID);
+
+            if(initiator.getLastMessaged() != null && initiator.getLastMessaged().equals(player)) {
+                initiator.setLastMessaged(null);
+            }
+
+            if(player.getLastMessaged() != null && player.getLastMessaged().equals(initiator)) {
+                player.setLastMessaged(null);
+            }
+
+            var initiatorProfile = initiator.getProfile();
+            var playerProfile = player.getProfile();
+
+            initiatorProfile.getFriends().remove(playerUUID);
+            playerProfile.getFriends().remove(initiatorUUID);
+        }));
+    }
+
     @PayloadHandler(requiredState = RequiredState.REQUEST)
     public void onProfileCreate(ProfileCreatePayload payload) {
-        final var profilesManager = Atom.getAtom().getProfilesManager();
+        final var profilesManager = Atom.getAtom().getPlayerManager();
 
         var profile = payload.getProfile();
         var id = profile.getId();
@@ -34,9 +71,10 @@ public class ProfileListener implements Listener {
 
     @PayloadHandler(requiredState = RequiredState.REQUEST)
     public void onProfileRequest(final ProfileRequestPayload payload) {
-        final var profilesManager = Atom.getAtom().getProfilesManager();
+        final var profilesManager = Atom.getAtom().getPlayerManager();
 
         var type = payload.getType();
+
         if(type == ProfileRequestPayload.Type.SINGLE) {
             var name = payload.getName();
             var id = payload.getId();
@@ -159,7 +197,7 @@ public class ProfileListener implements Listener {
 
     @PayloadHandler(requiredState = RequiredState.REQUEST)
     public void onProfileUpdate(ProfileUpdatePayload payload) {
-        final var profilesManager = Atom.getAtom().getProfilesManager();
+        final var profilesManager = Atom.getAtom().getPlayerManager();
 
         var profile = payload.getProfile();
         var id = profile.getId();

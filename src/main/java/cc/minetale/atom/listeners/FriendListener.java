@@ -1,13 +1,13 @@
 package cc.minetale.atom.listeners;
 
 import cc.minetale.atom.Atom;
-import cc.minetale.atom.managers.ProfilesManager;
+import cc.minetale.atom.managers.PlayerManager;
 import cc.minetale.atom.network.FriendRequest;
 import cc.minetale.atom.network.Player;
-import cc.minetale.commonlib.modules.pigeon.payloads.friend.FriendRequestAcceptPayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.friend.FriendRequestCreatePayload;
-import cc.minetale.commonlib.modules.pigeon.payloads.friend.FriendRequestDenyPayload;
-import cc.minetale.commonlib.modules.profile.Profile;
+import cc.minetale.commonlib.pigeon.payloads.friend.FriendRequestAcceptPayload;
+import cc.minetale.commonlib.pigeon.payloads.friend.FriendRequestCreatePayload;
+import cc.minetale.commonlib.pigeon.payloads.friend.FriendRequestDenyPayload;
+import cc.minetale.commonlib.profile.Profile;
 import cc.minetale.commonlib.util.MC;
 import cc.minetale.pigeon.annotations.PayloadHandler;
 import cc.minetale.pigeon.annotations.PayloadListener;
@@ -28,18 +28,18 @@ public class FriendListener implements Listener {
 
         if (friendRequest.isActiveRequest()) {
             Player.sendMessage(initiatorUUID,
-                    Component.text("Please wait before sending this person another request.", MC.CC.RED.getTextColor()));
+                    MC.component("Please wait before sending this person another request.", MC.CC.RED));
             return;
         }
 
         friendRequest.getTimer().start();
         FriendRequest.friendRequestList.add(friendRequest);
 
-        Atom.getAtom().getProfilesManager()
+        Atom.getAtom().getPlayerManager()
                 .getProfile(payload.getTarget())
                 .thenAccept(profile -> {
                     Player.sendMessage(initiatorUUID,
-                            Component.text("You sent a friend request to " + profile.getName() + ", they have 5 minutes to accept it!", MC.CC.YELLOW.getTextColor()));
+                            MC.component("You sent a friend request to " + profile.getName() + ", they have 5 minutes to accept it!", MC.CC.YELLOW.getTextColor()));
                 });
      }
 
@@ -52,7 +52,7 @@ public class FriendListener implements Listener {
 
         if (friendRequest == null) {
             Player.sendMessage(initiatorUUID,
-                    Component.text("That person hasn't invited you to be friends!", MC.CC.RED.getTextColor()));
+                    MC.component("That person hasn't invited you to be friends!", MC.CC.RED));
             return;
         }
 
@@ -65,7 +65,7 @@ public class FriendListener implements Listener {
     public void onFriendRequestDeny(FriendRequestDenyPayload payload) {
         new Thread(() -> {
             try {
-                final ProfilesManager profilesManager = Atom.getAtom().getProfilesManager();
+                final PlayerManager playerManager = Atom.getAtom().getPlayerManager();
 
                 UUID initiatorUUID = payload.getInitiator();
                 UUID targetUUID = payload.getTarget();
@@ -74,22 +74,22 @@ public class FriendListener implements Listener {
 
                 if (friendRequest == null) {
                     Player.sendMessage(initiatorUUID,
-                            Component.text("That player hasn't invite you to be friends.", MC.CC.RED.getTextColor()));
+                            MC.component("That player hasn't invite you to be friends.", MC.CC.RED));
                     return;
                 }
 
-                Profile targetProfile = profilesManager.getProfile(targetUUID).get();
+                Profile targetProfile = playerManager.getProfile(targetUUID).get();
 
                 if(targetProfile != null) {
                     Player.sendMessage(initiatorUUID,
-                            Component.text("You denied " + targetProfile.getName() + "'s friend request.", MC.CC.RED.getTextColor()));
+                            MC.component("You denied " + targetProfile.getName() + "'s friend request.", MC.CC.RED));
                 }
 
-                Profile initiatorProfile = profilesManager.getProfile(initiatorUUID).get();
+                Profile initiatorProfile = playerManager.getProfile(initiatorUUID).get();
 
                 if(initiatorProfile != null) {
                     Player.sendMessage(targetUUID,
-                            Component.text(initiatorProfile.getName() + " denied your friend request.", MC.CC.RED.getTextColor()));
+                            MC.component(initiatorProfile.getName() + " denied your friend request.", MC.CC.RED));
                 }
 
                 friendRequest.getTimer().stop();

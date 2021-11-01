@@ -38,13 +38,13 @@ public class PartyPlayerOfflineTimer extends Timer {
             } else {
                 party.removeMember(this.player);
 
-                Atom.getAtom().getProfilesManager()
+                Atom.getAtom().getPlayerManager()
                         .getProfile(this.player)
                         .thenAccept(profile -> {
                             if(profile == null) { return; }
-                            party.sendPartyMessage(Component.text()
+                            party.sendPartyMessage(MC.component()
                                     .append(profile.api().getChatFormat())
-                                    .append(Component.text(" has been removed from the party for being offline.", MC.CC.RED.getTextColor()))
+                                    .append(MC.component(" has been removed from the party for being offline.", MC.CC.RED))
                                     .build());
                         });
             }

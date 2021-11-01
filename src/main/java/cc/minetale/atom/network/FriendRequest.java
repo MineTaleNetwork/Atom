@@ -1,9 +1,9 @@
 package cc.minetale.atom.network;
 
 import cc.minetale.atom.Atom;
-import cc.minetale.atom.managers.ProfilesManager;
+import cc.minetale.atom.managers.PlayerManager;
 import cc.minetale.atom.timers.FriendRequestTimer;
-import cc.minetale.commonlib.modules.profile.Profile;
+import cc.minetale.commonlib.profile.Profile;
 import cc.minetale.commonlib.util.MC;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Getter
@@ -55,29 +56,21 @@ public class FriendRequest {
     }
 
     public void accept() {
-        new Thread(() -> {
-            try {
-                final ProfilesManager profilesManager = Atom.getAtom().getProfilesManager();
+        final PlayerManager playerManager = Atom.getAtom().getPlayerManager();
 
-                Profile initiatorProfile = profilesManager.getProfile(initiator).get();
-                Profile targetProfile = profilesManager.getProfile(target).get();
+        playerManager.getProfile(initiator).thenAccept(initiatorProfile -> playerManager.getProfile(target).thenAccept(targetProfile -> {
+            Player.sendNotification(target, "Friend",
+                    MC.component("You are now friends with " + initiatorProfile.getName(), MC.CC.GREEN.getTextColor()));
 
-                Player.sendNotification(target, "Friend",
-                        Component.text("You are now friends with " + initiatorProfile.getName(), MC.CC.GREEN.getTextColor()));
+            Player.sendNotification(initiator, "Friend",
+                    MC.component("You are now friends with " + targetProfile.getName(), MC.CC.GREEN.getTextColor()));
 
-                Player.sendNotification(initiator, "Friend",
-                        Component.text("You are now friends with " + targetProfile.getName(), MC.CC.GREEN.getTextColor()));
+            initiatorProfile.getFriends().add(target);
+            targetProfile.getFriends().add(initiator);
 
-                initiatorProfile.getFriends().add(target);
-                targetProfile.getFriends().add(initiator);
-
-                profilesManager.updateProfile(initiatorProfile);
-                profilesManager.updateProfile(targetProfile);
-            } catch(InterruptedException | ExecutionException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
-        }).start();
+            playerManager.updateProfile(initiatorProfile);
+            playerManager.updateProfile(targetProfile);
+        }));
     }
 
 }

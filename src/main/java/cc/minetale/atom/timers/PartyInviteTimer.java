@@ -1,13 +1,13 @@
 package cc.minetale.atom.timers;
 
 import cc.minetale.atom.Atom;
-import cc.minetale.atom.managers.ProfilesManager;
+import cc.minetale.atom.managers.PlayerManager;
 import cc.minetale.atom.network.Party;
 import cc.minetale.atom.network.PartyInvite;
 import cc.minetale.atom.network.Player;
 import cc.minetale.atom.util.timer.api.Timer;
 import cc.minetale.atom.util.timer.api.TimerType;
-import cc.minetale.commonlib.modules.profile.Profile;
+import cc.minetale.commonlib.profile.Profile;
 import cc.minetale.commonlib.util.MC;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
@@ -37,20 +37,19 @@ public class PartyInviteTimer extends Timer {
 
     @Override
     public void onComplete() {
-        new Thread(() -> {
             try {
-                final ProfilesManager profilesManager = Atom.getAtom().getProfilesManager();
+                final PlayerManager playerManager = Atom.getAtom().getPlayerManager();
 
                 Party party = Party.getPartyByUUID(this.partyUUID);
-                Player player = Player.getPlayerByUuid(this.playerUUID);
+                Player player = Player.getPlayer(this.playerUUID);
 
-                Profile profile = profilesManager.getProfile(this.playerUUID).get();
+                Profile profile = playerManager.getProfile(this.playerUUID).get();
                 if(profile == null) { return; }
                 if(party != null) {
-                    party.sendPartyMessage(Component.text()
-                            .append(Component.text("The party invite to ", MC.CC.GRAY.getTextColor()))
+                    party.sendPartyMessage(MC.component()
+                            .append(MC.component("The party invite to ", MC.CC.GRAY.getTextColor()))
                             .append(profile.api().getChatFormat())
-                            .append(Component.text(" has expired.", MC.CC.GRAY.getTextColor()))
+                            .append(MC.component(" has expired.", MC.CC.GRAY.getTextColor()))
                             .build());
                 }
 
@@ -58,21 +57,17 @@ public class PartyInviteTimer extends Timer {
                     PartyInvite invite = player.getPartyInvite(this.partyUUID);
 
                     if(invite != null) {
-                        Profile inviter = profilesManager.getProfile(invite.getInviterUUID()).get();
+                        Profile inviter = playerManager.getProfile(invite.getInviterUUID()).get();
 
-                        Player.sendNotification(this.playerUUID, "Party", Component.text()
-                                .append(Component.text("The party invite from ", MC.CC.GRAY.getTextColor()))
+                        Player.sendNotification(this.playerUUID, "Party", MC.component()
+                                .append(MC.component("The party invite from ", MC.CC.GRAY.getTextColor()))
                                 .append(inviter.api().getChatFormat())
-                                .append(Component.text(" has expired.", MC.CC.GRAY.getTextColor()))
+                                .append(MC.component(" has expired.", MC.CC.GRAY.getTextColor()))
                                 .build());
 
                         player.getPartyInvites().remove(invite.getInviterUUID());
                     }
                 }
-            } catch(ExecutionException | InterruptedException e) {
-                Thread.currentThread().interrupt();
-                e.printStackTrace();
-            }
         });
     }
 

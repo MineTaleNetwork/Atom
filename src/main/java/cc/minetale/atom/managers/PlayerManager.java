@@ -1,31 +1,36 @@
 package cc.minetale.atom.managers;
 
-import cc.minetale.commonlib.modules.profile.Profile;
-import cc.minetale.commonlib.modules.profile.ProfileQueryResult;
+import cc.minetale.atom.network.Player;
+import cc.minetale.commonlib.profile.Profile;
+import cc.minetale.commonlib.profile.ProfileQueryResult;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
+import lombok.Getter;
 import org.bson.Document;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class ProfilesManager {
+@Getter
+public class PlayerManager {
 
-    private Cache<UUID, Profile> cache;
+    private final Cache<UUID, Player> cache;
 
-    public ProfilesManager(CacheManager cacheManager) {
-        this.cache = cacheManager.createCache("profiles",
-                CacheConfigurationBuilder.newCacheConfigurationBuilder(UUID.class, Profile.class,
+    public PlayerManager(CacheManager cacheManager) {
+        this.cache = cacheManager.createCache("players",
+                CacheConfigurationBuilder.newCacheConfigurationBuilder(UUID.class, Player.class,
                         ResourcePoolsBuilder.newResourcePoolsBuilder().heap(100000, EntryUnit.ENTRIES)));
     }
 
@@ -49,24 +54,37 @@ public class ProfilesManager {
     }
 
     public void updateProfile(Profile profile) {
-        this.cache.put(profile.getId(), profile);
+        Player player = this.cache.get(profile.getId());
+
+        if(player != null) {
+            player.setProfile(profile);
+        } else {
+            this.cache.put(profile.getId(), new Player(profile));
+        }
+
         Profile.getCollection().replaceOne(Filters.eq(profile.getId().toString()), profile.toDocument(), new ReplaceOptions().upsert(true));
     }
 
     public CompletableFuture<Profile> getProfile(String name) {
         return new CompletableFuture<Profile>()
                 .completeAsync(() -> {
-                    for(Cache.Entry<UUID, Profile> ent : this.cache) {
-                        var profile = ent.getValue();
-                        if(profile.getName().equalsIgnoreCase(name))
-                            return profile;
+                    for(Cache.Entry<UUID, Player> ent : this.cache) {
+                        Player player = ent.getValue();
+                        if(player.getName().equalsIgnoreCase(name))
+                            return player.getProfile();
                     }
 
                     var document = Profile.getCollection().find(Filters.eq("searchableName", name.toUpperCase())).first();
                     if(document == null) { return null; }
 
-                    var profile = Profile.fromDocument(document);
-                    cache.put(profile.getId(), profile);
+                    Profile profile = Profile.fromDocument(document);
+                    Player player = this.cache.get(profile.getId());
+
+                    if(player != null) {
+                        player.setProfile(profile);
+                    } else {
+                        this.cache.put(profile.getId(), new Player(profile));
+                    }
 
                     return profile;
                 });
@@ -75,14 +93,20 @@ public class ProfilesManager {
     public CompletableFuture<Profile> getProfile(UUID uuid) {
         return new CompletableFuture<Profile>()
                 .completeAsync(() -> {
-                    var profile = this.cache.get(uuid);
-                    if(profile != null) { return profile; }
+                    Player player = this.cache.get(uuid);
+                    if(player != null) { return player.getProfile(); }
 
                     var document = Profile.getCollection().find(Filters.eq(uuid.toString())).first();
                     if(document == null) { return null; }
 
-                    profile = Profile.fromDocument(document);
-                    cache.put(profile.getId(), profile);
+                    Profile profile = Profile.fromDocument(document);
+                    player = this.cache.get(profile.getId());
+
+                    if(player != null) {
+                        player.setProfile(profile);
+                    } else {
+                        this.cache.put(profile.getId(), new Player(profile));
+                    }
 
                     return profile;
                 });
@@ -97,15 +121,15 @@ public class ProfilesManager {
                             .map(String::toUpperCase)
                             .collect(Collectors.toList());
 
-                    for(Cache.Entry<UUID, Profile> ent : this.cache) {
-                        var profile = ent.getValue();
+                    for(Cache.Entry<UUID, Player> ent : this.cache) {
+                        Player player = ent.getValue();
                         for(final var it = searchable.iterator(); it.hasNext();) {
                             var name = it.next();
                             if(name == null || name.isEmpty()) { continue; }
 
-                            if(profile.getName().equals(name)) {
+                            if(player.getName().equals(name)) {
                                 it.remove();
-                                profiles.add(profile);
+                                profiles.add(player.getProfile());
                             }
                         }
                     }
@@ -117,7 +141,13 @@ public class ProfilesManager {
                             var document = cursor.next();
 
                             var profile = Profile.fromDocument(document);
-                            cache.put(profile.getId(), profile);
+                            Player player = this.cache.get(profile.getId());
+
+                            if(player != null) {
+                                player.setProfile(profile);
+                            } else {
+                                this.cache.put(profile.getId(), new Player(profile));
+                            }
                         }
                     }
 
@@ -130,15 +160,15 @@ public class ProfilesManager {
                 .completeAsync(() -> {
                     List<Profile> profiles = new ArrayList<>();
 
-                    for(Cache.Entry<UUID, Profile> ent : this.cache) {
-                        var profile = ent.getValue();
+                    for(Cache.Entry<UUID, Player> ent : this.cache) {
+                        Player player = ent.getValue();
                         for(final var it = ids.iterator(); it.hasNext();) {
                             var id = it.next();
                             if(id == null) { continue; }
 
-                            if(profile.getId().equals(id)) {
+                            if(player.getUuid().equals(id)) {
                                 it.remove();
-                                profiles.add(profile);
+                                profiles.add(player.getProfile());
                             }
                         }
                     }
@@ -153,8 +183,14 @@ public class ProfilesManager {
                         while(cursor.hasNext()) {
                             var document = cursor.next();
 
-                            var profile = Profile.fromDocument(document);
-                            cache.put(profile.getId(), profile);
+                            Profile profile = Profile.fromDocument(document);
+                            Player player = this.cache.get(profile.getId());
+
+                            if(player != null) {
+                                player.setProfile(profile);
+                            } else {
+                                this.cache.put(profile.getId(), new Player(profile));
+                            }
                         }
                     }
 

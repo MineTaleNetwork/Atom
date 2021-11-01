@@ -1,6 +1,14 @@
 # User-specific stuff
 .idea/
 
+# Gradle
+.gradle/
+build/
+gradle/
+gradlew
+gradlew.bat
+
+# Files
 *.iml
 *.ipr
 *.iws

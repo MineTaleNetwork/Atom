@@ -31,18 +31,18 @@ public class FriendRequestTimer extends Timer {
     public void onComplete() {
         List<FriendRequest> friendRequestList = FriendRequest.friendRequestList;
 
-        Atom.getAtom().getProfilesManager()
+        Atom.getAtom().getPlayerManager()
                 .getProfile(this.friendRequest.getTarget())
                 .thenAccept(profile -> {
                     Player.sendMessage(this.friendRequest.getInitiator(),
-                            Component.text("Your friend request to " + profile.getName() + " has expired.", MC.CC.RED.getTextColor()));
+                            MC.component("Your friend request to " + profile.getName() + " has expired.", MC.CC.RED));
                 });
 
-        Atom.getAtom().getProfilesManager()
+        Atom.getAtom().getPlayerManager()
                 .getProfile(this.friendRequest.getInitiator())
                 .thenAccept(profile -> {
                     Player.sendMessage(this.friendRequest.getTarget(),
-                        Component.text("The friend request from " + profile.getName() + " has expired.", MC.CC.RED.getTextColor()));
+                        MC.component("The friend request from " + profile.getName() + " has expired.", MC.CC.RED));
                 });
 
         friendRequestList.remove(this.friendRequest);
