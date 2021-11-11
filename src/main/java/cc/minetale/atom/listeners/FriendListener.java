@@ -33,7 +33,7 @@ public class FriendListener implements Listener {
         }
 
         friendRequest.getTimer().start();
-        FriendRequest.friendRequestList.add(friendRequest);
+        FriendRequest.getFriendRequestList().add(friendRequest);
 
         Atom.getAtom().getPlayerManager()
                 .getProfile(payload.getTarget())

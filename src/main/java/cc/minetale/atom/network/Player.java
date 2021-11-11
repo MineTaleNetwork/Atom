@@ -2,7 +2,7 @@ package cc.minetale.atom.network;
 
 import cc.minetale.atom.Atom;
 import cc.minetale.atom.managers.PlayerManager;
-import cc.minetale.atom.timers.PartyPlayerOfflineTimer;
+import cc.minetale.atom.timers.PartyOfflineTimer;
 import cc.minetale.commonlib.pigeon.payloads.conversation.ConversationFromPayload;
 import cc.minetale.commonlib.pigeon.payloads.conversation.ConversationToPayload;
 import cc.minetale.commonlib.pigeon.payloads.minecraft.MessagePlayerPayload;
@@ -20,36 +20,29 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-@Getter
-@Setter
+@Getter @Setter
 public class Player {
 
     private final UUID uuid;
     private final Map<UUID, PartyInvite> partyInvites;
+    private boolean online;
+    private String server;
     private Player lastMessaged;
     private Profile profile;
 
     public Player(UUID uuid) {
         this.uuid = uuid;
+        this.online = false;
         this.partyInvites = new HashMap<>();
     }
 
     public Player(Profile profile) {
         this.uuid = profile.getId();
         this.partyInvites = new HashMap<>();
-
+        this.online = false;
         this.profile = profile;
     }
 
-    public static void sendNotification(UUID player, String prefix, Component message) {
-        PigeonUtil.broadcast(new MessagePlayerPayload(player, MC.Chat.notificationMessage(prefix, message)));
-    }
-
-    public static void sendMessage(UUID player, Component message) {
-        PigeonUtil.broadcast(new MessagePlayerPayload(player, message));
-    }
-
-    // TODO -> Fix this
     public static @NotNull CompletableFuture<Player> getPlayer(UUID uuid) {
         PlayerManager manager = Atom.getAtom().getPlayerManager();
         Player player = manager.getCache().get(uuid);
@@ -68,6 +61,33 @@ public class Player {
         return CompletableFuture.completedFuture(player);
     }
 
+    public UUID getUuid() {
+        return this.profile.getId();
+    }
+
+    public String getName() {
+        return this.profile.getName();
+    }
+
+    public void sendNotification(String prefix, Component message) {
+        this.sendMessage(MC.Chat.notificationMessage(prefix, message));
+    }
+
+    public void sendMessage(Component message) {
+        PigeonUtil.broadcast(new MessagePlayerPayload(this.getUuid(), message));
+    }
+
+    // TODO: Optimize?
+    public boolean isInParty() {
+        for (Party party : Party.getPartyList()) {
+            if (party.getMembers().contains(this.getUuid())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public PartyInvite getPartyInvite(UUID partyUUID) {
         for (PartyInvite invite : this.partyInvites.values()) {
             if (invite.getPartyUUID().equals(partyUUID)) {
@@ -82,47 +102,28 @@ public class Player {
         return this.partyInvites.get(playerUUID);
     }
 
-    public boolean isInParty() {
-        for (Party party : Party.getPartyList()) {
-            if (party.getMembers().contains(this.getUuid())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public void addPartyInvite(UUID partyUUID, UUID inviterUUID) {
-        // TODO: Check if they have receiving party invites toggled
-        final PlayerManager playerManager = Atom.getAtom().getPlayerManager();
+        Player.getPlayer(inviterUUID).thenAccept(inviter -> {
+            var inviterFormat = inviter.getProfile().api().getChatFormat();
 
-        Profile initiatorProfile = playerManager.getProfile(inviterUUID).get(10, TimeUnit.SECONDS);
-        Profile targetProfile = playerManager.getProfile(this.getUuid()).get(10, TimeUnit.SECONDS);
+            var party = Party.getPartyByUUID(partyUUID);
 
-        if (initiatorProfile == null || targetProfile == null) {
-            PigeonUtil.broadcast(new MessagePlayerPayload(inviterUUID, MC.Chat.notificationMessage("Party",
-                    MC.component("Unable to invite that player to the party.", MC.CC.GRAY.getTextColor()))));
+            if (party != null) {
+                party.sendPartyMessage(MC.component(
+                        inviterFormat,
+                        MC.component(" has invited ", MC.CC.GRAY),
+                        this.profile.api().getChatFormat(),
+                        MC.component(" to the party!", MC.CC.GRAY)
+                ));
 
-            return;
-        }
+                this.sendNotification("Party", MC.component(
+                        inviterFormat,
+                        MC.component(" has invited you to join their party. You have 60 seconds to accept.", MC.CC.GRAY)
+                ));
 
-        Party party = Party.getPartyByUUID(partyUUID);
-
-        if (party != null) {
-            party.sendPartyMessage(MC.component()
-                    .append(initiatorProfile.api().getChatFormat())
-                    .append(MC.component(" has invited ", MC.CC.GRAY.getTextColor()))
-                    .append(targetProfile.api().getChatFormat())
-                    .append(MC.component(" to the party!", MC.CC.GRAY.getTextColor()))
-                    .build());
-        }
-
-        Player.sendNotification(this.getUuid(), "Party", MC.component()
-                .append(initiatorProfile.api().getChatFormat())
-                .append(MC.component(" has invited you to join their party. You have 60 seconds to accept.", MC.CC.GRAY.getTextColor()))
-                .build());
-
-        this.partyInvites.put(inviterUUID, new PartyInvite(partyUUID, inviterUUID, this.getUuid()));
+                this.partyInvites.put(inviterUUID, new PartyInvite(partyUUID, inviterUUID, this.getUuid()));
+            }
+        });
     }
 
     public void sendConversationMessage(Player target, String message) {
@@ -133,29 +134,23 @@ public class Player {
         target.setLastMessaged(this);
     }
 
-    // TODO -> This could fuck up?
+    // TODO -> Maybe condense these two payloads?
     public void reply(String message) {
-        PigeonUtil.broadcast(new ConversationToPayload(this.getUuid(), this.lastMessaged.getUuid(), message));
-        PigeonUtil.broadcast(new ConversationFromPayload(this.getUuid(), this.lastMessaged.getUuid(), message));
+        if(this.lastMessaged != null) {
+            PigeonUtil.broadcast(new ConversationToPayload(this.getUuid(), this.lastMessaged.getUuid(), message));
+            PigeonUtil.broadcast(new ConversationFromPayload(this.getUuid(), this.lastMessaged.getUuid(), message));
 
-        this.lastMessaged.setLastMessaged(this);
+            this.lastMessaged.setLastMessaged(this);
+        }
     }
 
-    public PartyPlayerOfflineTimer getPartyPlayerOfflineTimer() {
-        return (PartyPlayerOfflineTimer) Atom.getAtom().getTimerManager()
+    public PartyOfflineTimer getPartyOfflineTimer() {
+        return (PartyOfflineTimer) Atom.getAtom().getTimerManager()
                 .getTimers()
                 .stream()
-                .filter(timer -> timer instanceof PartyPlayerOfflineTimer && ((PartyPlayerOfflineTimer) timer).getPlayer()
-                        .equals(this.getUuid()))
-                .findFirst().orElse(null);
-    }
-
-    public UUID getUuid() {
-        return this.profile.getId();
-    }
-
-    public String getName() {
-        return this.profile.getName();
+                .filter(timerType -> timerType instanceof PartyOfflineTimer timer && timer.getPlayerUUID().equals(this.getUuid()))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

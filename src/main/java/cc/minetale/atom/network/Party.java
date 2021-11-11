@@ -4,7 +4,6 @@ import cc.minetale.atom.Atom;
 import cc.minetale.commonlib.util.MC;
 import cc.minetale.commonlib.util.PigeonUtil;
 import lombok.Getter;
-import lombok.Setter;
 import net.kyori.adventure.text.Component;
 
 import java.util.ArrayList;
@@ -38,51 +37,48 @@ public class Party {
         return partyList.stream().filter(party -> party.getMembers().contains(uuid)).findFirst().orElse(null);
     }
 
-    // TODO -> Additional Code
+    // TODO -> Needs additional code (Like messages)
     public void setLeader(UUID player) {
         this.leader = player;
     }
 
+    public void addMember(UUID playerUUID) {
+        Player.getPlayer(playerUUID).thenAccept(player -> {
+            if (this.members.contains(playerUUID)) {
+                player.sendNotification("Party", MC.component("You are already in that party.", MC.CC.RED);
+                return;
+            }
 
-    public void addMember(UUID player) {
-        if (this.members.contains(player)) {
-            Player.sendNotification(player, "Party", MC.component("You are already in that party.", MC.CC.RED));
-            return;
-        }
+            this.members.add(playerUUID);
 
-        this.members.add(player);
-
-        Atom.getAtom().getPlayerManager()
-                .getProfile(player)
-                .thenAccept(profile -> {
-                    if (profile == null) { return; }
-                    this.sendPartyMessage(MC.component()
-                            .append(profile.api().getChatFormat())
-                            .append(MC.component(" has joined the party.", MC.CC.GREEN.getTextColor()))
-                            .build());
-                });
-
-
+            this.sendPartyMessage(MC.component(
+                    player.getProfile().api().getChatFormat(),
+                    MC.component(" has joined the party.", MC.CC.GREEN)
+            ));
+        });
     }
 
     public void removeMember(UUID uuid) {
         this.getMembers().remove(uuid);
     }
 
+    // TODO Oh god optimize this oh shit of fuck oh shit of fuck
     public void sendPartyMessage(UUID initiator, String message) {
-        Atom.getAtom().getPlayerManager()
-                .getProfile(initiator)
-                .thenAccept(profile -> {
-                    if (profile == null) { return; }
-                    for (UUID uuid : this.getMembers()) {
-                        PigeonUtil.broadcast(new MessagePlayerPayload(uuid, MC.Chat.notificationMessage("Party",
-                                MC.component()
-                                        .append(profile.api().getChatFormat())
-                                        .append(MC.component(": ", MC.CC.GRAY.getTextColor()))
-                                        .append(MC.component(message))
-                                        .build())));
-                    }
-                });
+        // TODO -> Send a payload containing a list of UUIDs maybe?
+        // TODO -> Then send a message to each uuid if they are online?
+//        Atom.getAtom().getPlayerManager()
+//                .getProfile(initiator)
+//                .thenAccept(profile -> {
+//                    if (profile == null) { return; }
+//                    for (UUID uuid : this.getMembers()) {
+//                        PigeonUtil.broadcast(new MessagePlayerPayload(uuid, MC.Chat.notificationMessage("Party",
+//                                MC.component()
+//                                        .append(profile.api().getChatFormat())
+//                                        .append(MC.component(": ", MC.CC.GRAY.getTextColor()))
+//                                        .append(MC.component(message))
+//                                        .build())));
+//                    }
+//                });
     }
 
     public void sendPartyMessage(Component message) {

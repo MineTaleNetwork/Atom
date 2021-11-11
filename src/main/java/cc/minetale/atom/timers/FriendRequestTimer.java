@@ -4,9 +4,7 @@ import cc.minetale.atom.Atom;
 import cc.minetale.atom.network.FriendRequest;
 import cc.minetale.atom.network.Player;
 import cc.minetale.atom.util.timer.api.Timer;
-import cc.minetale.atom.util.timer.api.TimerType;
 import cc.minetale.commonlib.util.MC;
-import net.kyori.adventure.text.Component;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -16,8 +14,9 @@ public class FriendRequestTimer extends Timer {
     public final FriendRequest friendRequest;
 
     public FriendRequestTimer(FriendRequest friendRequest) {
-        super(TimerType.COUNTDOWN, Atom.getAtom().getTimerManager());
+        super(Atom.getAtom().getTimerManager());
         setDuration(TimeUnit.MINUTES.toMillis(5));
+
         this.friendRequest = friendRequest;
     }
 
@@ -29,23 +28,12 @@ public class FriendRequestTimer extends Timer {
 
     @Override
     public void onComplete() {
-        List<FriendRequest> friendRequestList = FriendRequest.friendRequestList;
+        Player.getPlayer(this.friendRequest.getInitiator()).thenAccept(initiator -> Player.getPlayer(this.friendRequest.getTarget()).thenAccept(target -> {
+            initiator.sendMessage(MC.component("Your friend request to " + target.getName() + " has expired.", MC.CC.RED));
+            target.sendMessage(MC.component("The friend request from " + initiator.getName() + " has expired.", MC.CC.RED));
+        }));
 
-        Atom.getAtom().getPlayerManager()
-                .getProfile(this.friendRequest.getTarget())
-                .thenAccept(profile -> {
-                    Player.sendMessage(this.friendRequest.getInitiator(),
-                            MC.component("Your friend request to " + profile.getName() + " has expired.", MC.CC.RED));
-                });
-
-        Atom.getAtom().getPlayerManager()
-                .getProfile(this.friendRequest.getInitiator())
-                .thenAccept(profile -> {
-                    Player.sendMessage(this.friendRequest.getTarget(),
-                        MC.component("The friend request from " + profile.getName() + " has expired.", MC.CC.RED));
-                });
-
-        friendRequestList.remove(this.friendRequest);
+        FriendRequest.getFriendRequestList().remove(this.friendRequest);
     }
 
     @Override

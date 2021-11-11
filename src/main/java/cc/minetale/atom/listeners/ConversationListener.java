@@ -12,37 +12,20 @@ import cc.minetale.pigeon.annotations.PayloadHandler;
 import cc.minetale.pigeon.annotations.PayloadListener;
 import cc.minetale.pigeon.listeners.Listener;
 
-import java.text.MessageFormat;
 import java.util.UUID;
 
 @PayloadListener
 public class ConversationListener implements Listener {
 
-    // TODO -> Testing Purposes
-    @PayloadHandler
-    public void onCommonMessage(CommonMessagePayload payload) {
-        return new MessageFormat(ChatColor.translateAlternateColorCodes('&',
-                Zoot.get().getMainConfig().getString(path))).format(objects);
-    }
-
-    // TODO -> Add a payload to check if the player is online
     @PayloadHandler
     public void onConversationMessage(ConversationMessagePayload payload) {
-        UUID initiatorUUID = payload.getInitiator();
-
-        // TODO -> First check if they are online THEN attempt to load their Player
-//        Player.sendMessage(initiatorUUID,
-//                        MC.component("That player is currently not online.", MC.CC.RED));
-
-        Player.getPlayer(initiatorUUID).thenAccept(initiator -> Player.getPlayer(payload.getTarget()).thenAccept(target -> {
+        Player.getPlayer(payload.getInitiator()).thenAccept(initiator -> Player.getPlayer(payload.getTarget()).thenAccept(target -> {
             String message = payload.getMessage();
 
-            // TODO -> Check if they are online
-//            if (target == null) {
-//                Player.sendMessage(initiatorUUID,
-//                        MC.component("That player is currently not online.", MC.CC.RED));
-//                return;
-//            }
+            if(!target.isOnline()) {
+                initiator.sendMessage(MC.component("That player is currently not online.", MC.CC.RED));
+                return;
+            }
 
             initiator.sendConversationMessage(target, message);
         }));

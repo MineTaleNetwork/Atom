@@ -7,12 +7,9 @@ import lombok.Setter;
 
 import java.util.concurrent.TimeUnit;
 
-@Getter
-@Setter
-@RequiredArgsConstructor
+@Getter @Setter @RequiredArgsConstructor
 public abstract class Timer {
 
-    private final TimerType type;
     private final TimerManager manager;
 
     private Long startTime = System.currentTimeMillis();
@@ -75,7 +72,7 @@ public abstract class Timer {
     }
 
     private void checkCachedDuration() {
-        if (type == TimerType.COUNTDOWN && duration != null) {
+        if (duration != null) {
             this.endTime = startTime + duration;
         }
     }
@@ -84,9 +81,7 @@ public abstract class Timer {
         if (isPaused()) {
             return false;
         }
-        return type == TimerType.STOPWATCH ?
-                endTime - System.currentTimeMillis() >= 0 :
-                endTime - System.currentTimeMillis() <= 0;
+        return endTime - System.currentTimeMillis() <= 0;
     }
 
     public long getSeconds(long time) {

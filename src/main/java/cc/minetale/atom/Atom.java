@@ -22,7 +22,7 @@ import java.util.Arrays;
 @Getter
 public class Atom {
 
-    // TODO: PERMS (CTRL SHIFT F)
+    // TODO: On atom start load all players from Proxy OR just stop proxy when atom stops
     // TODO: Friend Requests
     // TODO: Cooldowns
     // TODO: Gamemode listener

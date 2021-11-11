@@ -110,6 +110,8 @@ public class PartyListener implements Listener {
             return;
         }
 
+        // TODO: Check if they have receiving party invites toggled
+
         target.addPartyInvite(party.getUuid(), initiatorUUID);
     }
 

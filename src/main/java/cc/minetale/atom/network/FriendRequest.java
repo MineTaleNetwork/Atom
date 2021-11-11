@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutionException;
 @Getter
 public class FriendRequest {
 
-    public static List<FriendRequest> friendRequestList = new ArrayList<>();
+    @Getter private static final List<FriendRequest> friendRequestList = new ArrayList<>();
 
     // TODO: Handle ignoring, check if a player has an active friend request then remove it if they ignored them.
 

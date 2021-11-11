@@ -10,7 +10,7 @@ import java.util.List;
 @Getter
 public class SyncCode {
 
-    public static List<SyncCode> syncCodeList = new ArrayList<>();
+    @Getter private static final List<SyncCode> syncCodeList = new ArrayList<>();
 
     private final Player player;
     private final int code;

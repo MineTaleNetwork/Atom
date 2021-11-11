@@ -9,8 +9,7 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Getter
-@Setter
+@Getter @Setter
 public class TimerManager {
 
     private final Set<Timer> timers = ConcurrentHashMap.newKeySet();
